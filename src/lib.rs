@@ -306,11 +306,12 @@ pub fn run() -> Result<(), JsValue> {
         //context.begin_path();
         //context.ellipse(center_x, center_y, radius, radius, 0.0, 0.0, 180.0).unwrap();
         //context.fill();
-        context.set_font("bold 18px sans-serif");
+        context.set_font("bold 28px sans-serif");
         context.set_text_align("center");
         context.set_text_baseline("middle");
         context.fill_text(&rk_str, center_x, center_y).unwrap();
-        key_checker.entry(String::from(&rk_str)).or_insert(1);
+        let cc = key_checker.entry(String::from(&rk_str)).or_insert(0);
+        *cc +=1;
 
 
         /*let related_keys = related_keys(&root_key);
@@ -339,9 +340,12 @@ pub fn run() -> Result<(), JsValue> {
                 //context.ellipse(child_x, child_y, radius, radius, 0.0, 0.0, 180.0).unwrap();
                 //context.fill();
                 let key = related_keys.get(cnt).unwrap();
-                context.fill_text(&key_to_str(key), child_x, child_y).unwrap();
                 let k = String::from(&key_to_str(key));
-                //key_checker.get(&k).unwrap();
+                let cc = key_checker.entry(k).or_insert(0);
+                *cc +=1;
+                //if *cc <= 1 {
+                    context.fill_text(&key_to_str(key), child_x, child_y).unwrap();
+                //}
 
                 let related_keys_inner = related_keys_inner(key);
 
@@ -349,7 +353,7 @@ pub fn run() -> Result<(), JsValue> {
                 let parent_y = child_y;
                 let mut cnt_inner = 0;
                 while cnt_inner < stem_len {
-                    let dist = std::cmp::min(i*3, (dist*2.0) as usize) as f64;
+                    let dist = std::cmp::min(i*3, (dist*3.0) as usize) as f64;
                     let degree = degree + (60.0*(cnt_inner as f64/6.0));
                     let theta = degree * std::f64::consts::PI / 180.0;
                     let child_x = dist*theta.cos() + center_x;
@@ -359,14 +363,21 @@ pub fn run() -> Result<(), JsValue> {
                     context.line_to(child_x, child_y);
                     context.stroke();
 
-                    if i >= 66 {
+                    if i >= 99 {
                         //context.begin_path();
                         //context.ellipse(child_x, child_y, radius, radius, 0.0, 0.0, 180.0).unwrap();
                         //context.fill();
+                        //let key_inner = related_keys_inner.get(cnt_inner).unwrap();
+                        //context.fill_text(&key_to_str(key_inner), child_x, child_y).unwrap();
                         let key_inner = related_keys_inner.get(cnt_inner).unwrap();
-                        context.fill_text(&key_to_str(key_inner), child_x, child_y).unwrap();
+                        let k = String::from(&key_to_str(key_inner));
+                        let cc = key_checker.entry(k).or_insert(0);
+                        *cc +=1;
+                        if *cc <= 1 {
+                            context.fill_text(&key_to_str(key_inner), child_x, child_y).unwrap();
+                        }
 
-                        let parent_x = child_x;
+                        /*let parent_x = child_x;
                         let parent_y = child_y;
                         let mut cnt_inner2 = 0;
                         while cnt_inner2 < stem_len {
@@ -386,7 +397,7 @@ pub fn run() -> Result<(), JsValue> {
                                 context.fill();
                             }
                             cnt_inner2 += 1;
-                        }
+                        }*/
                     }
                     cnt_inner += 1;
                 }
