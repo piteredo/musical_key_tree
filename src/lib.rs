@@ -31,6 +31,11 @@ impl Step {
             C => "C", D => "D", E => "E", F => "F", G => "G", A => "A", B => "B",
         }
     }
+    fn from_num(n: i32) -> Step {
+        match n%7 {
+            0 => C, 1 => D, 2 => E, 3 => F, 4 => G, 5 => A, 6 => B, _=> panic!(),
+        }
+    }
 }
 
 enum Alter {
@@ -48,7 +53,11 @@ impl Alter {
         }
     }
     fn clone(&self) -> Alter {
-        self.clone()
+        match self {
+            Flat => Flat,
+            Natural => Natural,
+            Sharp => Sharp,
+        }
     }
     fn get_minos(&self) -> Alter {
         match self {
@@ -66,9 +75,9 @@ impl Alter {
     }
     fn to_str(&self) -> &str {
         match self {
-            Flat => " Flat ",
-            Natural => " ",
-            Sharp => " Sharp ",
+            Flat => "b",
+            Natural => "",
+            Sharp => "#",
         }
     }
 }
@@ -78,9 +87,9 @@ impl Octave {
     fn value(&self) -> u32 {
         self.0
     }
-    /*fn clone(&self) -> u32 {
+    fn clone(&self) -> u32 {
         self.0.clone()
-    }*/
+    }
 }
 
 struct Note {
@@ -99,19 +108,17 @@ enum KeyType {
     Minor
 }
 impl KeyType {
-    fn clone(&self) -> KeyType {
-        self.clone()
-    }
     fn to_str(&self) -> &str {
         match self {
-            Major => "Major",
-            Minor => "Minor",
+            KeyType::Major => "",
+            KeyType::Minor => "m",
         }
     }
-    fn from_str(type_str: &str) -> KeyType {
-        match type_str {
-            "Major" => KeyType::Major,
-            "Minor" => KeyType::Minor,
+    fn from_str(ty: i32) -> KeyType {
+        match ty {
+            0 => KeyType::Major,
+            1 => KeyType::Minor,
+            _ => panic!()
         }
     }
 }
@@ -122,9 +129,9 @@ struct Key {
 }
 
 fn root_key() -> Key {
-    let root_step = Step::C;
+    let root_step = Step::A;
     let root_alter = Alter::Natural;
-    let root_key_type = KeyType::Major;
+    let root_key_type = KeyType::Minor;
     init_root_key(root_step, root_alter, root_key_type)
 }
 
@@ -148,79 +155,90 @@ fn init_root_key(step: Step, alter: Alter, key_type: KeyType) -> Key {
 }
 
 fn related_keys(root_key: &Key) -> Vec<Key> {
-    /*match root_key.key_type {
+    match root_key.key_type {
         KeyType::Major => related_keys_of_major(&root_key),
         KeyType::Minor => related_keys_of_minor(&root_key),
-    }*/
-    related_keys_of_major(&root_key)
+    }
+}
+
+fn related_keys_inner(root_key: &Key) -> Vec<Key> {
+    match root_key.key_type {
+        KeyType::Major => related_keys_of_major(&root_key),
+        KeyType::Minor => related_keys_of_minor(&root_key),
+    }
 }
 
 fn related_keys_of_major(root_key: &Key) -> Vec<Key> {
     let mut result: Vec<Key> = Vec::new();
     let chromatic_dist_arr = [0, 2, 4, 5, 7, 9];
-    let key_type_arr = ["Minor", "Minor", "Minor", "Major", "Major", "Minor"];
-    let mut current_step = &root_key.root_note.step;
+    let key_type_arr = [1, 1, 1, 0, 0, 1];
     for i in 0..chromatic_dist_arr.len() {
+        let chrom_dist = chromatic_dist_arr[i];
 
-        let mut next_octave = 0;
-        if root_key.root_note.step.scale_index() == 6 {
+        let mut next_octave = root_key.root_note.octave.clone();
+        if (root_key.root_note.step.scale_index() + i as u32) >= 7 {
             next_octave += 1;
         }
 
-        let next_note = Note {
-            step: root_key.root_note.step.next_step(),
+        let mut next_note = Note {
+            step: Step::from_num((root_key.root_note.step.scale_index() + i as u32) as i32),
             alter: root_key.root_note.alter.clone(),
             octave: Octave(next_octave),
         };
+
+        let dist = chromatic_interval(&root_key.root_note, &next_note);
+        if dist > chrom_dist {
+            next_note.alter = next_note.alter.get_minos();
+        } else if dist < chrom_dist {
+            next_note.alter = next_note.alter.get_plus();
+        }
 
         let next_key = Key {
             root_note: next_note,
             key_type: KeyType::from_str(key_type_arr[i]),
         };
+
         result.push(next_key);
-        current_step = &root_key.root_note.step.next_step();
     }
     result
 }
 
-/*fn related_keys_of_minor(root_key: &Key) -> Vec<Key> {
+fn related_keys_of_minor(root_key: &Key) -> Vec<Key> {
     let mut result: Vec<Key> = Vec::new();
-    let chromatic_dist_arr = [0, 2, 1, 2, 2, 1, 2];
-    let key_type_arr = [KeyType::Major, KeyType::Major, KeyType::Minor, KeyType::Minor, KeyType::Major, KeyType::Major];
-    let rkrn = &root_key.root_note;
+    let chromatic_dist_arr = [0, 2, 3, 5, 7, 8, 10];
+    let key_type_arr = [0, 0, 0, 1, 1, 0, 0];
     for i in 0..chromatic_dist_arr.len() {
+        if i==1 { continue; };
 
-        if i == 1 { continue };
+        let chrom_dist = chromatic_dist_arr[i];
 
-        let dist = chromatic_dist_arr[i];
-        let dist_minus = dist-1;
-        let dist_plus = dist+1;
-
-        let next_step = rkrn.step.next_step();
-        let mut next_octave = rkrn.octave.clone();
-        if rkrn.step.scale_index() == 6 {
+        let mut next_octave = root_key.root_note.octave.clone();
+        if (root_key.root_note.step.scale_index() + i as u32) >= 7 {
             next_octave += 1;
         }
+
         let mut next_note = Note {
-            step: next_step,
-            alter: rkrn.alter.clone(),
+            step: Step::from_num((root_key.root_note.step.scale_index() + i as u32) as i32),
+            alter: root_key.root_note.alter.clone(),
             octave: Octave(next_octave),
         };
 
-        next_note.alter = match chromatic_interval(&rkrn, &next_note) as i32 {
-            dist_minus => next_note.alter.get_plus(),
-            dist => next_note.alter,
-            dist_plus => next_note.alter.get_minos(),
-        };
+        let dist = chromatic_interval(&root_key.root_note, &next_note);
+        if dist > chrom_dist {
+            next_note.alter = next_note.alter.get_minos();
+        } else if dist < chrom_dist {
+            next_note.alter = next_note.alter.get_plus();
+        }
 
         let next_key = Key {
-            root_note: next_note.clone(),
-            key_type: key_type_arr[i].clone(),
+            root_note: next_note,
+            key_type: KeyType::from_str(key_type_arr[i]),
         };
+
         result.push(next_key);
     }
     result
-}*/
+}
 
 const OCTAVE_CHROMATIC_STEPS: u32 = 12;
 fn chromatic_interval(n1: &Note, n2: &Note) -> u32 {
@@ -230,11 +248,6 @@ fn chromatic_interval(n1: &Note, n2: &Note) -> u32 {
     let n2_steps = (n2_oct + n2.step.chromatic_index()) as i32 + n2.alter.value();
     (n1_steps as i32 - n2_steps as i32).abs() as u32 % OCTAVE_CHROMATIC_STEPS
 }
-
-
-
-
-
 
 
 
@@ -258,6 +271,8 @@ pub fn run() -> Result<(), JsValue> {
     let root_key = root_key();
     let rk_str = key_to_str(&root_key);
 
+
+
     let f = Rc::new(RefCell::new(None));
     let g = f.clone();
 
@@ -277,7 +292,8 @@ pub fn run() -> Result<(), JsValue> {
     let mut i = 0;
     *g.borrow_mut() = Some(Closure::wrap(Box::new(move || {
 
-
+        use std::collections::HashMap;
+        let mut key_checker = HashMap::new();
 
         context.set_fill_style(&"#CCCCCC".into());
         context.fill_rect(0.0, 0.0, canvas.width() as f64, canvas.height() as f64);
@@ -286,20 +302,24 @@ pub fn run() -> Result<(), JsValue> {
         let center_y = canvas.height() as f64/2.0;
         let radius = 4.0;
         context.set_fill_style(&"#333333".into());
+        context.set_stroke_style(&"#999999".into());
         //context.begin_path();
         //context.ellipse(center_x, center_y, radius, radius, 0.0, 0.0, 180.0).unwrap();
         //context.fill();
-        context.set_font("bold 28px sans-serif");
+        context.set_font("bold 18px sans-serif");
         context.set_text_align("center");
         context.set_text_baseline("middle");
         context.fill_text(&rk_str, center_x, center_y).unwrap();
+        key_checker.entry(String::from(&rk_str)).or_insert(1);
 
-        let related_keys = related_keys(&root_key);
+
+        /*let related_keys = related_keys(&root_key);
         for i in 0..6 {
             let key = &related_keys[i];
             context.fill_text(&key_to_str(key), 100.0, 100.0 + (i*100)as f64).unwrap();
-        }
+        }*/
 
+        let related_keys = related_keys(&root_key);
 
         let stem_len = 6;
         let mut cnt = 0;
@@ -315,15 +335,21 @@ pub fn run() -> Result<(), JsValue> {
             context.stroke();
 
             if i >= 33 {
-                context.begin_path();
-                context.ellipse(child_x, child_y, radius, radius, 0.0, 0.0, 180.0).unwrap();
-                context.fill();
+                //context.begin_path();
+                //context.ellipse(child_x, child_y, radius, radius, 0.0, 0.0, 180.0).unwrap();
+                //context.fill();
+                let key = related_keys.get(cnt).unwrap();
+                context.fill_text(&key_to_str(key), child_x, child_y).unwrap();
+                let k = String::from(&key_to_str(key));
+                //key_checker.get(&k).unwrap();
+
+                let related_keys_inner = related_keys_inner(key);
 
                 let parent_x = child_x;
                 let parent_y = child_y;
                 let mut cnt_inner = 0;
                 while cnt_inner < stem_len {
-                    let dist = std::cmp::min(i*3, (dist*2.0) as i32) as f64;
+                    let dist = std::cmp::min(i*3, (dist*2.0) as usize) as f64;
                     let degree = degree + (60.0*(cnt_inner as f64/6.0));
                     let theta = degree * std::f64::consts::PI / 180.0;
                     let child_x = dist*theta.cos() + center_x;
@@ -334,15 +360,17 @@ pub fn run() -> Result<(), JsValue> {
                     context.stroke();
 
                     if i >= 66 {
-                        context.begin_path();
-                        context.ellipse(child_x, child_y, radius, radius, 0.0, 0.0, 180.0).unwrap();
-                        context.fill();
+                        //context.begin_path();
+                        //context.ellipse(child_x, child_y, radius, radius, 0.0, 0.0, 180.0).unwrap();
+                        //context.fill();
+                        let key_inner = related_keys_inner.get(cnt_inner).unwrap();
+                        context.fill_text(&key_to_str(key_inner), child_x, child_y).unwrap();
 
                         let parent_x = child_x;
                         let parent_y = child_y;
                         let mut cnt_inner2 = 0;
                         while cnt_inner2 < stem_len {
-                            let dist = std::cmp::min(i*3, (dist*2.0) as i32) as f64;
+                            let dist = std::cmp::min(i*3, (dist*2.0) as usize) as f64;
                             let degree = degree + (10.0*(cnt_inner2 as f64/6.0));
                             let theta = degree * std::f64::consts::PI / 180.0;
                             let child_x = dist*theta.cos() + center_x;
