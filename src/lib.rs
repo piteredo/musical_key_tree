@@ -1,3 +1,11 @@
+/*
+    未完部分
+    ・異名同音に対応する
+    ・たまに動かないキーがある(恐らくbb ## に到達してる)
+    ・派生キー全体で360°を分割して広く使う
+    ・24調表示するまで枝を延ばす(３親等だと若干足りてない
+*/
+
 extern crate wasm_bindgen;
 
 use std::f64;
@@ -331,89 +339,6 @@ pub fn run() -> Result<(), JsValue> {
                 }
             }
         };
-
-
-
-
-
-
-
-
-
-        /*let speed = 7;
-        let circle_1_radius = 100;
-        let circle_2_radius = 200;
-        let circle_3_radius = 400;
-
-        let related_keys = related_keys(&root_key);
-        let stem_len = related_keys.len() as i32;
-
-        let parent_x = center_x;
-        let parent_y = center_y;
-        let mut circle_1_list: Vec<[f64; 3]> = Vec::new();
-        let mut circle_2_list: Vec<[f64; 3]> = Vec::new();
-        let mut circle_1_cnt = 0;
-        while circle_1_cnt < stem_len {
-            let parent_degree = 0.0;
-            let degree = degree(parent_degree, circle_1_cnt, 1, stem_len); // 1 => circle_level
-            let goal_pos = goal_pos(frame_count, speed, circle_1_radius, degree, parent_x, parent_y);
-            ctx.begin_path();
-            ctx.move_to(parent_x, parent_y);
-            ctx.line_to(goal_pos[0], goal_pos[1]);
-            ctx.stroke();
-            circle_1_list.push([degree, goal_pos[0], goal_pos[1]]);
-
-            let key = related_keys.get(circle_1_cnt as usize).unwrap();
-            ctx.fill_text(&key_to_str(key), goal_pos[0], goal_pos[1]).unwrap();
-
-            circle_1_cnt += 1;
-        }
-        ctx.fill_text(&rk_str, center_x, center_y).unwrap();
-
-        if frame_count >= circle_1_radius / speed {
-            for ii in 0..circle_1_list.len() {
-                let parent_x = circle_1_list[ii][1];
-                let parent_y = circle_1_list[ii][2];
-                let mut circle_2_cnt = 0;
-                while circle_2_cnt < stem_len {
-                    let parent_degree = circle_1_list[ii][0];
-                    let degree = degree(parent_degree, circle_2_cnt, 6, stem_len); // 6 => circle_level
-                    let goal_pos = goal_pos(frame_count, speed, circle_2_radius, degree, center_x, center_y);
-                    ctx.begin_path();
-                    ctx.move_to(parent_x, parent_y);
-                    ctx.line_to(goal_pos[0], goal_pos[1]);
-                    ctx.stroke();
-                    circle_2_list.push([degree, goal_pos[0], goal_pos[1]]);
-
-                    if frame_count >= circle_1_radius/speed + circle_2_radius/speed {
-
-                    }
-                    circle_2_cnt += 1;
-                }
-            }
-        }
-
-        if frame_count >= circle_1_radius/speed + circle_2_radius/speed {
-            for ii in 0..circle_2_list.len() {
-                let parent_x = circle_2_list[ii][1];
-                let parent_y = circle_2_list[ii][2];
-                let mut circle_3_cnt = 0;
-                while circle_3_cnt < stem_len {
-                    let parent_degree = circle_2_list[ii][0];
-                    let degree = degree(parent_degree, circle_3_cnt, 36, stem_len); // 36 => circle_level
-                    let goal_pos = goal_pos(frame_count, speed, circle_3_radius, degree, center_x, center_y);
-                    ctx.begin_path();
-                    ctx.move_to(parent_x, parent_y);
-                    ctx.line_to(goal_pos[0], goal_pos[1]);
-                    ctx.stroke();
-
-                    if frame_count >= circle_1_radius/speed + circle_2_radius/speed {
-
-                    }
-                    circle_3_cnt += 1;
-                }
-            }
-        }*/
 
         frame_count += 1;
         request_animation_frame(f.borrow().as_ref().unwrap());
