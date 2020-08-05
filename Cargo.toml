@@ -21,4 +21,5 @@ features = [
   'Window',
   'CanvasRenderingContext2d',
   'HtmlCanvasElement',
+  'console',
 ]

@@ -199,8 +199,9 @@ pub fn run() -> Result<(), JsValue> {
         .unwrap()
         .dyn_into::<web_sys::CanvasRenderingContext2d>()
         .unwrap();
-    ctx.set_stroke_style(&"rgb(100,100,100,0.3)".into());
-    ctx.set_font("bold 18px sans-serif");
+    ctx.set_line_width(2.0);
+    //ctx.set_stroke_style(&"rgb(240,240,240,0.4)".into()); // white
+    ctx.set_stroke_style(&"rgb(60,60,60,0.3)".into()); // black
     ctx.set_text_align("center");
     ctx.set_text_baseline("middle");
 
@@ -209,7 +210,7 @@ pub fn run() -> Result<(), JsValue> {
 
     let root_step = Step::C;
     let root_alter = Alter::Natural;
-    let root_key_type = KeyType::Minor;
+    let root_key_type = KeyType::Major;
     let root_key = init_key(root_step, root_alter, root_key_type);
     let root_key_str = key_to_str(&root_key);
     key_cheker1.insert(root_key_str, 0);
@@ -220,17 +221,23 @@ pub fn run() -> Result<(), JsValue> {
     *g.borrow_mut() = Some(Closure::wrap(Box::new(move || {
 
         // bg
-        ctx.set_fill_style(&"#DDDDBB".into());
+        ctx.set_fill_style(&"#66b8d9".into()); //sky
+        //ctx.set_fill_style(&"#193a80".into()); //blue
+        //ctx.set_fill_style(&"#c9d152".into()); //yellow
+        //ctx.set_fill_style(&"#7d1818".into()); //red
         ctx.fill_rect(0.0, 0.0, canvas.width() as f64, canvas.height() as f64);
-        ctx.set_fill_style(&"#333333".into()); // for text
+        //ctx.set_fill_style(&"#EEEEEE".into()); // for text white
+        ctx.set_fill_style(&"#111111".into()); // for text black
 
         //--------------------------
 
-        let circle_1_radius = 100;
-        let circle_2_radius = 200;
-        let circle_3_radius = 400;
+        let speed = 12;
+        let circle_1_radius = 150;
+        let circle_2_radius = 300;
+        let circle_3_radius = 450;
 
         //TODO
+        ctx.set_font("bold 48px sans-serif");
         ctx.fill_text(&key_to_str(&root_key), center_x, center_y).unwrap();
         let parent_x = center_x;
         let parent_y = center_y;
@@ -242,16 +249,30 @@ pub fn run() -> Result<(), JsValue> {
             key_cheker1.insert(key1_str, 0);
 
             //TODO
-            let parent_degree = 0.0;
-            let degree = degree(parent_degree, i, 1, keys1.len()); // 1 => circle_level
-            let goal_pos = goal_pos(frame_count, speed, circle_1_radius, degree, parent_x, parent_y);
+            let degree = 0.0 + ((360.0 / 1 as f64) * (i as f64 / keys1.len() as f64));  // 1 => circle_level
+            let dist = std::cmp::min(frame_count*speed, circle_1_radius) as f64;
+            let theta = degree * std::f64::consts::PI / 180.0;
+            let goal_x = dist*theta.cos() + parent_x;
+            let goal_y = dist*theta.sin() + parent_y;
             ctx.begin_path();
             ctx.move_to(parent_x, parent_y);
-            ctx.line_to(goal_pos[0], goal_pos[1]);
+            ctx.line_to(goal_x, goal_y);
             ctx.stroke();
-            ctx.fill_text(&key_to_str(key1), 150.0, 100.0+(i*50)as f64).unwrap();
+            ctx.set_font("bold 28px sans-serif");
+            ctx.fill_text(&key_to_str(key1), goal_x, goal_y).unwrap();
+            let parent_x = goal_x;
+            let parent_y = goal_y;
 
             let keys2 = related_keys(key1);
+            let mut keys2_cnt = 0;
+            for j in 0..keys2.len() {
+                let key2 = keys2.get(j).unwrap();
+                let key2_str = key_to_str(key2);
+                if !key_cheker1.contains_key(&key2_str) {
+                    keys2_cnt += 1;
+                }
+            }
+            let mut key2_inner_cnt = 0;
             for j in 0..keys2.len() {
                 let key2 = keys2.get(j).unwrap();
                 let key2_str = key_to_str(key2);
@@ -259,18 +280,54 @@ pub fn run() -> Result<(), JsValue> {
                     key_cheker2.insert(key2_str, 0);
 
                     //TODO
-                    ctx.fill_text(&key_to_str(key2), 200.0+(i*50)as f64, 100.0+(j*50)as f64).unwrap();
+                    let parent_degree = degree;
+                    let degree = parent_degree + ((360.0 / 6 as f64) * key2_inner_cnt as f64 / keys2_cnt as f64); // 6 => circle_level
+                    let dist = std::cmp::min(frame_count*speed, circle_2_radius) as f64;
+                    let theta = degree * std::f64::consts::PI / 180.0;
+                    let goal_x = dist*theta.cos() + center_x;
+                    let goal_y = dist*theta.sin() + center_y;
+                    ctx.begin_path();
+                    ctx.move_to(parent_x, parent_y);
+                    ctx.line_to(goal_x, goal_y);
+                    ctx.stroke();
+                    ctx.set_font("bold 20px sans-serif");
+                    ctx.fill_text(&key_to_str(key2), goal_x, goal_y).unwrap();
+                    let parent_x = goal_x;
+                    let parent_y = goal_y;
 
                     let keys3 = related_keys(key2);
+                    let mut keys3_cnt = 0;
+                    for k in 0..keys3.len() {
+                        let key3 = keys3.get(k).unwrap();
+                        let key3_str = key_to_str(key3);
+                        if !key_cheker1.contains_key(&key3_str) && !key_cheker2.contains_key(&key3_str) {
+                            keys3_cnt += 1;
+                        }
+                    }
+                    let mut key3_inner_cnt = 0;
                     for k in 0..keys3.len() {
                         let key3 = keys3.get(k).unwrap();
                         let key3_str = key_to_str(key3);
                         if !key_cheker1.contains_key(&key3_str) && !key_cheker2.contains_key(&key3_str) {
 
                             //TODO
-                            ctx.fill_text(&key_to_str(key3), 100.0+(i*550)as f64+(j*50)as f64, 500.0+(k*50)as f64).unwrap();
+                            let parent_degree = degree;
+                            let degree = parent_degree + ((360.0 / 36 as f64) * key3_inner_cnt as f64 / keys3_cnt as f64); // 36 => circle_level
+                            let dist = std::cmp::min(frame_count*speed, circle_3_radius) as f64;
+                            let theta = degree * std::f64::consts::PI / 180.0;
+                            let goal_x = dist*theta.cos() + center_x;
+                            let goal_y = dist*theta.sin() + center_y;
+                            ctx.begin_path();
+                            ctx.move_to(parent_x, parent_y);
+                            ctx.line_to(goal_x, goal_y);
+                            ctx.stroke();
+                            ctx.set_font("bold 12px sans-serif");
+                            ctx.fill_text(&key_to_str(key3), goal_x, goal_y).unwrap();
+
+                            key3_inner_cnt += 1;
                         }
                     }
+                key2_inner_cnt += 1;
                 }
             }
         };
