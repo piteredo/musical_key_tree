@@ -93,13 +93,6 @@ fn document() -> web_sys::Document {
 //------------------------------------------------------------
 
 
-fn root_key() -> Key {
-    let root_step = Step::C;
-    let root_alter = Alter::Natural;
-    let root_key_type = KeyType::Minor;
-    init_root_key(root_step, root_alter, root_key_type)
-}
-
 fn key_to_str(key: &Key) -> String {
     let step = key.root_note.step.to_str();
     let alter = key.root_note.alter.to_str();
@@ -107,7 +100,7 @@ fn key_to_str(key: &Key) -> String {
     format!("{}{}{}", step, alter, key_type)
 }
 
-fn init_root_key(step: Step, alter: Alter, key_type: KeyType) -> Key {
+fn init_key(step: Step, alter: Alter, key_type: KeyType) -> Key {
     let root_note = Note {
         step: step,
         alter: alter,
@@ -174,7 +167,7 @@ fn chromatic_interval(n1: &Note, n2: &Note) -> u32 {
     (n1_steps as i32 - n2_steps as i32).abs() as u32 % OCTAVE_CHROMATIC_STEPS
 }
 
-fn degree(parent_degree: f64, circle_cnt: i32, circle_num: i32, stem_len: i32) -> f64{
+fn degree(parent_degree: f64, circle_cnt: usize, circle_num: i32, stem_len: usize) -> f64{
     parent_degree + ((360.0 / circle_num as f64) * (circle_cnt as f64 / stem_len as f64))
 }
 
@@ -206,31 +199,102 @@ pub fn run() -> Result<(), JsValue> {
         .unwrap()
         .dyn_into::<web_sys::CanvasRenderingContext2d>()
         .unwrap();
-    ctx.set_stroke_style(&"#999999".into());
-    ctx.set_font("bold 28px sans-serif");
+    ctx.set_stroke_style(&"rgb(100,100,100,0.3)".into());
+    ctx.set_font("bold 18px sans-serif");
     ctx.set_text_align("center");
     ctx.set_text_baseline("middle");
 
+    let mut key_cheker1 = std::collections::HashMap::new();
+    let mut key_cheker2 = std::collections::HashMap::new();
+
+    let root_step = Step::C;
+    let root_alter = Alter::Natural;
+    let root_key_type = KeyType::Minor;
+    let root_key = init_key(root_step, root_alter, root_key_type);
+    let root_key_str = key_to_str(&root_key);
+    key_cheker1.insert(root_key_str, 0);
+
     let center_x = canvas.width() as f64/2.0;
     let center_y = canvas.height() as f64/2.0;
-    let root_key = root_key();
-    let rk_str = key_to_str(&root_key);
     let mut frame_count = 0;
     *g.borrow_mut() = Some(Closure::wrap(Box::new(move || {
 
         // bg
-        ctx.set_fill_style(&"#CCCCCC".into());
+        ctx.set_fill_style(&"#DDDDBB".into());
         ctx.fill_rect(0.0, 0.0, canvas.width() as f64, canvas.height() as f64);
         ctx.set_fill_style(&"#333333".into()); // for text
 
-        let speed = 5;
+        //--------------------------
+
         let circle_1_radius = 100;
         let circle_2_radius = 200;
+        let circle_3_radius = 400;
 
-        let stem_len = 6;
+        //TODO
+        ctx.fill_text(&key_to_str(&root_key), center_x, center_y).unwrap();
+        let parent_x = center_x;
+        let parent_y = center_y;
+
+        let keys1 = related_keys(&root_key);
+        for i in 0..keys1.len() {
+            let key1 = keys1.get(i).unwrap();
+            let key1_str = key_to_str(key1);
+            key_cheker1.insert(key1_str, 0);
+
+            //TODO
+            let parent_degree = 0.0;
+            let degree = degree(parent_degree, i, 1, keys1.len()); // 1 => circle_level
+            let goal_pos = goal_pos(frame_count, speed, circle_1_radius, degree, parent_x, parent_y);
+            ctx.begin_path();
+            ctx.move_to(parent_x, parent_y);
+            ctx.line_to(goal_pos[0], goal_pos[1]);
+            ctx.stroke();
+            ctx.fill_text(&key_to_str(key1), 150.0, 100.0+(i*50)as f64).unwrap();
+
+            let keys2 = related_keys(key1);
+            for j in 0..keys2.len() {
+                let key2 = keys2.get(j).unwrap();
+                let key2_str = key_to_str(key2);
+                if !key_cheker1.contains_key(&key2_str) {
+                    key_cheker2.insert(key2_str, 0);
+
+                    //TODO
+                    ctx.fill_text(&key_to_str(key2), 200.0+(i*50)as f64, 100.0+(j*50)as f64).unwrap();
+
+                    let keys3 = related_keys(key2);
+                    for k in 0..keys3.len() {
+                        let key3 = keys3.get(k).unwrap();
+                        let key3_str = key_to_str(key3);
+                        if !key_cheker1.contains_key(&key3_str) && !key_cheker2.contains_key(&key3_str) {
+
+                            //TODO
+                            ctx.fill_text(&key_to_str(key3), 100.0+(i*550)as f64+(j*50)as f64, 500.0+(k*50)as f64).unwrap();
+                        }
+                    }
+                }
+            }
+        };
+
+
+
+
+
+
+
+
+
+        /*let speed = 7;
+        let circle_1_radius = 100;
+        let circle_2_radius = 200;
+        let circle_3_radius = 400;
+
+        let related_keys = related_keys(&root_key);
+        let stem_len = related_keys.len() as i32;
+
         let parent_x = center_x;
         let parent_y = center_y;
         let mut circle_1_list: Vec<[f64; 3]> = Vec::new();
+        let mut circle_2_list: Vec<[f64; 3]> = Vec::new();
         let mut circle_1_cnt = 0;
         while circle_1_cnt < stem_len {
             let parent_degree = 0.0;
@@ -242,13 +306,12 @@ pub fn run() -> Result<(), JsValue> {
             ctx.stroke();
             circle_1_list.push([degree, goal_pos[0], goal_pos[1]]);
 
-            if frame_count >= circle_1_radius / speed {
-                let related_keys = related_keys(&root_key);
-                let key = related_keys.get(circle_1_cnt as usize).unwrap();
-                ctx.fill_text(&key_to_str(key), goal_pos[0], goal_pos[1]).unwrap();
-            }
+            let key = related_keys.get(circle_1_cnt as usize).unwrap();
+            ctx.fill_text(&key_to_str(key), goal_pos[0], goal_pos[1]).unwrap();
+
             circle_1_cnt += 1;
         }
+        ctx.fill_text(&rk_str, center_x, center_y).unwrap();
 
         if frame_count >= circle_1_radius / speed {
             for ii in 0..circle_1_list.len() {
@@ -263,8 +326,9 @@ pub fn run() -> Result<(), JsValue> {
                     ctx.move_to(parent_x, parent_y);
                     ctx.line_to(goal_pos[0], goal_pos[1]);
                     ctx.stroke();
+                    circle_2_list.push([degree, goal_pos[0], goal_pos[1]]);
 
-                    if frame_count >= 99 {
+                    if frame_count >= circle_1_radius/speed + circle_2_radius/speed {
 
                     }
                     circle_2_cnt += 1;
@@ -272,7 +336,27 @@ pub fn run() -> Result<(), JsValue> {
             }
         }
 
-        ctx.fill_text(&rk_str, center_x, center_y).unwrap();
+        if frame_count >= circle_1_radius/speed + circle_2_radius/speed {
+            for ii in 0..circle_2_list.len() {
+                let parent_x = circle_2_list[ii][1];
+                let parent_y = circle_2_list[ii][2];
+                let mut circle_3_cnt = 0;
+                while circle_3_cnt < stem_len {
+                    let parent_degree = circle_2_list[ii][0];
+                    let degree = degree(parent_degree, circle_3_cnt, 36, stem_len); // 36 => circle_level
+                    let goal_pos = goal_pos(frame_count, speed, circle_3_radius, degree, center_x, center_y);
+                    ctx.begin_path();
+                    ctx.move_to(parent_x, parent_y);
+                    ctx.line_to(goal_pos[0], goal_pos[1]);
+                    ctx.stroke();
+
+                    if frame_count >= circle_1_radius/speed + circle_2_radius/speed {
+
+                    }
+                    circle_3_cnt += 1;
+                }
+            }
+        }*/
 
         frame_count += 1;
         request_animation_frame(f.borrow().as_ref().unwrap());
