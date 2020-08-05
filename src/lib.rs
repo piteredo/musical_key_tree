@@ -4,6 +4,11 @@
     ・たまに動かないキーがある(恐らくbb ## に到達してる)
     ・派生キー全体で360°を分割して広く使う
     ・24調表示するまで枝を延ばす(３親等だと若干足りてない
+    ---
+    ・enum 前後の要素を参照する術がありそう
+    ・enum 同士の演算できないのか
+    ・本体 再起？ぽいの使って枝ループを１回で書きたい
+    ・js で扱えるもの(色、またはcanvas全て)はjsで書きたい
 */
 
 extern crate wasm_bindgen;
@@ -244,7 +249,6 @@ pub fn run() -> Result<(), JsValue> {
         let circle_2_radius = 300;
         let circle_3_radius = 450;
 
-        //TODO
         ctx.set_font("bold 48px sans-serif");
         ctx.fill_text(&key_to_str(&root_key), center_x, center_y).unwrap();
         let parent_x = center_x;
@@ -256,7 +260,6 @@ pub fn run() -> Result<(), JsValue> {
             let key1_str = key_to_str(key1);
             key_cheker1.insert(key1_str, 0);
 
-            //TODO
             let degree = 0.0 + ((360.0 / 1 as f64) * (i as f64 / keys1.len() as f64));  // 1 => circle_level
             let dist = std::cmp::min(frame_count*speed, circle_1_radius) as f64;
             let theta = degree * std::f64::consts::PI / 180.0;
@@ -270,6 +273,8 @@ pub fn run() -> Result<(), JsValue> {
             ctx.fill_text(&key_to_str(key1), goal_x, goal_y).unwrap();
             let parent_x = goal_x;
             let parent_y = goal_y;
+
+            //--------------------------
 
             let keys2 = related_keys(key1);
             let mut keys2_cnt = 0;
@@ -287,7 +292,6 @@ pub fn run() -> Result<(), JsValue> {
                 if !key_cheker1.contains_key(&key2_str) {
                     key_cheker2.insert(key2_str, 0);
 
-                    //TODO
                     let parent_degree = degree;
                     let degree = parent_degree + ((360.0 / 6 as f64) * key2_inner_cnt as f64 / keys2_cnt as f64); // 6 => circle_level
                     let dist = std::cmp::min(frame_count*speed, circle_2_radius) as f64;
@@ -302,6 +306,8 @@ pub fn run() -> Result<(), JsValue> {
                     ctx.fill_text(&key_to_str(key2), goal_x, goal_y).unwrap();
                     let parent_x = goal_x;
                     let parent_y = goal_y;
+
+                    //--------------------------
 
                     let keys3 = related_keys(key2);
                     let mut keys3_cnt = 0;
@@ -318,7 +324,6 @@ pub fn run() -> Result<(), JsValue> {
                         let key3_str = key_to_str(key3);
                         if !key_cheker1.contains_key(&key3_str) && !key_cheker2.contains_key(&key3_str) {
 
-                            //TODO
                             let parent_degree = degree;
                             let degree = parent_degree + ((360.0 / 36 as f64) * key3_inner_cnt as f64 / keys3_cnt as f64); // 36 => circle_level
                             let dist = std::cmp::min(frame_count*speed, circle_3_radius) as f64;
